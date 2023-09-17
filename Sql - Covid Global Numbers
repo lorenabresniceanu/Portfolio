@@ -1,0 +1,207 @@
+Select *
+From PortofolioProject..CovidDeaths
+where continent is not null
+order by 3,4
+
+Select *
+From PortofolioProject..CovidVaccinations
+order by 3,4
+
+Select Location, date, total_cases, new_cases, total_deaths, population
+From PortofolioProject..CovidDeaths
+where continent is not null
+order by 1,2
+
+--Total cases vs total deaths
+Select Location, date, total_cases, total_deaths, (total_deaths/total_cases)*100 as DeathPercentage
+From PortofolioProject..CovidDeaths
+where location='Romania'
+order by 5 desc
+--Most of the cases in Romania where on 19 May 2020 - 17191, with total of deaths = 1137 and death percentage=6,61%
+
+--Total cases vs Population
+--Shows what percetage of population got Covid
+Select Location, date, population, total_cases,  (total_cases/population)*100 as PopulationInfectedPercentage
+From PortofolioProject..CovidDeaths
+where location='Romania'
+order by 1,2
+
+
+--Countries with highest infection rate compared to population
+Select Location, population, Max(total_cases) as HighestInfectionCount,  Max((total_cases/population))*100 as  PopulationInfectedPercentage
+From PortofolioProject..CovidDeaths
+--where location='Romania'
+--where continent is not null
+group by Location, population
+order by PopulationInfectedPercentage desc
+--The highest infection rate was in Andorra and the lowest was in Tanzania
+
+Select  Location, population, date, Max(total_cases) as HighestInfectionCount,  Max((total_cases/population))*100 as  PopulationInfectedPercentage
+From PortofolioProject..CovidDeaths
+--where location='Romania'
+--where continent is not null
+group by Location, population,date
+order by PopulationInfectedPercentage desc
+--The highest infection rate was in Andorra and the lowest was in Tanzania
+
+--Countries with highest death count per population
+Select Location, Max(cast(Total_deaths as int)) as HighestDeathCount -- transform total_deaths in integer
+From PortofolioProject..CovidDeaths
+where continent is not null
+Group by Location
+order by HighestDeathCount desc
+--Highest death count is in United States=576232 and the lowest is in Grenada=1
+
+
+
+--Break things down by location
+Select Location, Max(cast(Total_deaths as int)) as HighestDeathCount -- transform total_deaths in integer
+From PortofolioProject..CovidDeaths
+where continent is null
+Group by Location
+order by HighestDeathCount desc
+
+Select location, sum(cast(new_deaths as int)) as TotalDeathCount
+from PortofolioProject..CovidDeaths
+where continent is null
+and location not in ('World', 'European Union', 'International')
+group by location
+order by TotalDeathCount desc
+
+
+--Break things down by comtinent
+Select continent, Max(cast(Total_deaths as int)) as HighestDeathCount -- transform total_deaths in integer
+From PortofolioProject..CovidDeaths
+where continent is not null
+Group by continent
+order by HighestDeathCount desc
+--Highest death count is in North America and lowest is in Oceania
+
+
+--Continent with the highest  death count per population
+Select continent,population, Max(cast(Total_deaths as int)) as HighestDeathCount,Max((total_deaths/population))*100 as  PopulationDeathsPercentage
+From PortofolioProject..CovidDeaths
+where continent is not null
+Group by continent, population
+order by HighestDeathCount desc
+--Highest death count is in North America and lowest is in Asia
+
+
+--Global numbers
+Select  sum(new_cases) as TotalNewCases, sum(cast(new_deaths as integer)) as TotalNewDeaths, 
+sum(cast(new_deaths as integer))/sum(new_cases)*100 as NewDeathsPercentage
+From PortofolioProject..CovidDeaths
+--where location='Romania'
+where continent is not null 
+--group by date
+order by 1,2 
+
+
+--Total population vs vaccinations - Romania
+Select d.continent, d.location, d.date, d.population, cast(v.new_vaccinations as int) as NewVacctinations
+From PortofolioProject..CovidDeaths d
+Join PortofolioProject..CovidVaccinations v
+ on d.location = v.location
+ and d.date= v.date
+where d.continent is not null 
+and v.location = 'Romania'
+order by cast(v.new_vaccinations as int) desc
+--Highest new cases in Romania were on 28.04.2021 = 168437
+
+--Total population vs vaccinations 
+Select d.continent, d.location, d.date, d.population, v.new_vaccinations, sum(convert(int,v.new_vaccinations)) over (partition by d.location order by d.location,
+d.date) as RollingPeopleVaccinated
+--, (RollingPeopleVaccinated/Population)*100
+From PortofolioProject..CovidDeaths d
+Join PortofolioProject..CovidVaccinations v
+ on d.location = v.location
+ and d.date= v.date
+where d.continent is not null 
+order by 2,3 
+
+
+--Use CTE
+
+With PopvsVac (Continent, Location, Date, Population, New_Vaccinations, RollingPeopleVaccinated)
+as 
+(
+Select d.continent, d.location, d.date, d.population, d.new_vaccinations, sum(convert(int,v.new_vaccinations)) over (partition by d.location order by d.location,
+d.date) as RollingPeopleVaccinated
+--, (RollingPeopleVaccinated/Population)*100
+From PortofolioProject..CovidDeaths d
+Join PortofolioProject..CovidVaccinations v
+ on d.location = v.location
+ and d.date= v.date
+where d.continent is not null 
+--order by 2,3 
+)
+Select * , (RollingPeopleVaccinated/Population)*100
+From PopvsVac
+
+
+--Temp Table
+Create Table #PercentPopulationVaccinated
+(
+Continent nvarchar(255),
+Location nvarchar(255),
+Date datetime,
+Population numeric,
+New_vaccinations numeric,
+RollingPeopleVaccinated numeric
+)
+
+Insert into #PercentPopulationVaccinated
+Select d.continent, d.location, d.date, d.population, d.new_vaccinations, sum(convert(int,v.new_vaccinations)) over (partition by d.location order by d.location,
+d.date) as RollingPeopleVaccinated
+--, (RollingPeopleVaccinated/Population)*100
+From PortofolioProject..CovidDeaths d
+Join PortofolioProject..CovidVaccinations v
+ on d.location = v.location
+ and d.date= v.date
+where d.continent is not null 
+--order by 2,3 
+
+Select * , (RollingPeopleVaccinated/Population)*100 as Percentage
+From #PercentPopulationVaccinated
+
+--Temp Table1
+Drop table if exists #PercentPopulationVaccinated
+Create Table #PercentPopulationVaccinated
+(
+Continent nvarchar(255),
+Location nvarchar(255),
+Date datetime,
+Population numeric,
+New_vaccinations numeric,
+RollingPeopleVaccinated numeric
+)
+
+Insert into #PercentPopulationVaccinated
+Select d.continent, d.location, d.date, d.population, d.new_vaccinations, sum(convert(int,v.new_vaccinations)) over (partition by d.location order by d.location,
+d.date) as RollingPeopleVaccinated
+--, (RollingPeopleVaccinated/Population)*100
+From PortofolioProject..CovidDeaths d
+Join PortofolioProject..CovidVaccinations v
+ on d.location = v.location
+ and d.date= v.date
+--where d.continent is not null 
+--order by 2,3 
+
+Select * , (RollingPeopleVaccinated/Population)*100 as Percentage
+From #PercentPopulationVaccinated
+
+
+--Creating view to store date for visualisation
+Create view PercentPopulationVaccinated as 
+Select d.continent, d.location, d.date, d.population, d.new_vaccinations, sum(convert(int,v.new_vaccinations)) over (partition by d.location order by d.location,
+d.date) as RollingPeopleVaccinated
+--, (RollingPeopleVaccinated/Population)*100
+From PortofolioProject..CovidDeaths d
+Join PortofolioProject..CovidVaccinations v
+ on d.location = v.location
+ and d.date= v.date
+where d.continent is not null 
+--order by 2,3 
+
+Select *
+from PercentPopulationVaccinated
