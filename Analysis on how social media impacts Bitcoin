@@ -1,0 +1,577 @@
+
+import pandas as pd
+import numpy as np
+import yfinance as yf
+
+btc = yf.download('BTC-USD', start='2019-01-01', end='2023-01-01')
+
+SettingWithCopyWarning
+btc = btc[['Close']].copy()
+
+
+btc['Year'] = btc.index.year
+
+btc_desc_stats = btc.groupby('Year').describe()
+
+btc_desc_stats = btc_desc_stats.transpose()
+btc['Log_Return'] = np.log(btc['Close'] / btc['Close'].shift(1))
+
+btc_volatility = pd.DataFrame()
+
+btc_volatility['Volatility'] = btc.groupby('Year')['Log_Return'].std() * np.sqrt(252) # 252 is the typical number of trading days in a year
+
+
+print(btc_desc_stats)
+
+print(btc_volatility)
+ 
+import pandas as pd
+import numpy as np
+import yfinance as yf
+import matplotlib.pyplot as plt
+
+btc = yf.download('BTC-USD', start='2019-01-01', end='2023-01-01')
+
+btc = btc[['Close']].copy()
+
+btc['Year'] = btc.index.year
+
+btc['Log_Return'] = np.log(btc['Close'] / btc['Close'].shift(1))
+
+for year in btc['Year'].unique():
+    btc[btc['Year'] == year]['Close'].plot(figsize=(12, 7), label=str(year))
+    plt.xlabel('Date')
+    plt.ylabel('Close Price')
+    plt.title(f'Bitcoin Price Evolution in {year}')
+    plt.legend()
+    plt.grid()
+    plt.show()
+
+
+btc_volatility = pd.DataFrame()
+btc_volatility['Volatility'] = btc.groupby('Year')['Log_Return'].std() * np.sqrt(252)
+btc_volatility.plot(kind='bar', legend=False, figsize=(12, 7))
+plt.xlabel('Year')
+plt.ylabel('Volatility')
+plt.title('Bitcoin Annual Volatility')
+plt.grid()
+plt.show()
+
+import pandas as pd
+import numpy as np
+import yfinance as yf
+import matplotlib.pyplot as plt
+import statsmodels.api as sm
+from statsmodels.tsa.stattools import adfuller
+
+
+btc = yf.download('BTC-USD', start='2019-01-01', end='2023-01-01')
+
+btc = btc[['Close']].copy()
+
+btc['Year'] = btc.index.year
+
+btc['Log_Return'] = np.log(btc['Close'] / btc['Close'].shift(1))
+
+fig, axs = plt.subplots(2, 2, figsize=(10, 10))  # Prepare 2x2 grid of subplots
+for i, year in enumerate(btc['Year'].unique()):
+    btc_year = btc[btc['Year'] == year].copy()
+    btc_year['MA_100'] = btc_year['Close'].rolling(window=100).mean()
+    btc_year['MA_50'] = btc_year['Close'].rolling(window=50).mean()
+    btc_year[['Close', 'MA_100', 'MA_50']].plot(ax=axs[i//2, i%2])
+    axs[i//2, i%2].set_title('Bitcoin Price and Moving Averages for {}'.format(year))
+plt.tight_layout()
+plt.show()
+
+
+fig, axs = plt.subplots(2, 2, figsize=(10, 10))  # Prepare 2x2 grid of subplots
+for i, year in enumerate(btc['Year'].unique()):
+    btc_year = btc[btc['Year'] == year].copy()
+    btc_year['MA_10'] = btc_year['Close'].rolling(window=10).mean()
+    btc_year['MA_50'] = btc_year['Close'].rolling(window=50).mean()
+    btc_year[['Close', 'MA_10', 'MA_50']].plot(ax=axs[i//2, i%2])
+    axs[i//2, i%2].set_title('Bitcoin Price and Moving Averages for {}'.format(year))
+plt.tight_layout()
+plt.show()
+
+fig, axs = plt.subplots(2, 2, figsize=(10, 10))  # Prepare 2x2 grid of subplots
+for i, year in enumerate(btc['Year'].unique()):
+    btc_year = btc[btc['Year'] == year].copy()
+    res = sm.tsa.seasonal_decompose(btc_year['Close'], model='additive')
+    res.trend.plot(ax=axs[i//2, i%2])
+    axs[i//2, i%2].set_title('Seasonal Decomposition - Trend Component for {}'.format(year))
+plt.tight_layout()
+plt.show()
+
+
+fig, axs = plt.subplots(2, 2, figsize=(10, 10))  # Prepare 2x2 grid of subplots
+for i, year in enumerate(btc['Year'].unique()):
+    btc_year = btc[btc['Year'] == year].copy()
+    btc_year['Log_Return'].hist(bins=50, ax=axs[i//2, i%2])
+    axs[i//2, i%2].set_title('Distribution of Bitcoin Returns for {}'.format(year))
+plt.tight_layout()
+plt.show()
+
+
+fig, axs = plt.subplots(2, 2, figsize=(10, 10))
+adf_results = {}
+for i, year in enumerate(btc['Year'].unique()):
+    btc_year = btc[btc['Year'] == year].copy()
+    adf_test = adfuller(btc_year['Close'])
+    adf_results[year] = adf_test[0:2]
+    axs[i//2, i%2].bar(['ADF Statistic', 'p-value'], [adf_test[0], adf_test[1]])
+    axs[i//2, i%2].set_title('Augmented Dickey-Fuller Test Results for {}'.format(year))
+plt.tight_layout()
+plt.show()
+
+for year in adf_results:
+    print(f"ADF Statistic for year {year}: {adf_results[year][0]}")
+    print(f"p-value: {adf_results[year][1]}")
+
+import pandas as pd
+import numpy as np
+import yfinance as yf
+import matplotlib.pyplot as plt
+import statsmodels.api as sm
+from statsmodels.tsa.stattools import adfuller
+
+
+btc = yf.download('BTC-USD', start='2019-01-01', end='2023-01-01')
+
+
+btc = btc[['Close']].copy()
+
+
+btc['Year'] = btc.index.year
+
+btc['Log_Return'] = np.log(btc['Close'] / btc['Close'].shift(1))
+
+
+btc['Log_Return_Diff'] = btc['Log_Return'].diff()
+
+btc = btc.dropna()
+
+fig, axs = plt.subplots(2, 2, figsize=(10, 10))  # Prepare 2x2 grid of subplots
+adf_results = {}
+for i, year in enumerate(btc['Year'].unique()):
+    btc_year = btc[btc['Year'] == year].copy()
+    adf_test = adfuller(btc_year['Log_Return_Diff'])
+    adf_results[year] = adf_test[0:2]  # Store ADF Statistic and p-value in a dictionary
+    axs[i//2, i%2].bar(['ADF Statistic', 'p-value'], [adf_test[0], adf_test[1]])
+    axs[i//2, i%2].set_title('Augmented Dickey-Fuller Test Results for {}'.format(year))
+plt.tight_layout()
+plt.show()
+
+
+for year in adf_results:
+    print(f"ADF Statistic for year {year}: {adf_results[year][0]}")
+    print(f"p-value: {adf_results[year][1]}")
+
+fig, axs = plt.subplots(2, 2, figsize=(10, 10))  # Prepare 2x2 grid of subplots
+for i, year in enumerate(btc['Year'].unique()):
+    btc_year = btc[btc['Year'] == year].copy()
+    btc_year['Log_Return_Diff'].hist(bins=50, ax=axs[i//2, i%2])
+    axs[i//2, i%2].set_title('Distribution of Bitcoin Returns for {}'.format(year))
+plt.tight_layout()
+plt.show()
+
+import pandas as pd
+from nltk.sentiment.vader import SentimentIntensityAnalyzer
+from textblob import TextBlob
+
+
+sid = SentimentIntensityAnalyzer()
+
+df = pd.read_csv(r'C:\Users\PC\Desktop\disertatie\disertatie.csv', encoding='latin-1')  # Replace with your file path
+df['Date'] = pd.to_datetime(df['Date'])
+df['Year'] = df['Date'].dt.year
+
+
+def compute_scores(df):
+    # Calculate sentiment scores
+    df['Sentiment_Score'] = df['Tweet'].apply(lambda tweet: sid.polarity_scores(tweet))
+    df['compound']  = df['Sentiment_Score'].apply(lambda score_dict: score_dict['compound'])
+    df['vader'] = df['compound'].apply(lambda c: 'pos' if c >=0.05 else ('neg' if c <=-0.05 else 'neu'))
+
+    df['Polarity'] = df['Tweet'].apply(lambda tweet: TextBlob(tweet).sentiment.polarity)
+    df['Subjectivity'] = df['Tweet'].apply(lambda tweet: TextBlob(tweet).sentiment.subjectivity)
+
+    return df
+
+df = compute_scores(df)
+
+results = {}
+
+
+for year in df['Year'].unique():
+    year_data = df[df['Year'] == year]
+    mean_vader_score = year_data['compound'].mean()
+    mean_sentiment_score = year_data['Sentiment_Score'].apply(lambda d: d['compound']).mean()
+    mean_polarity = year_data['Polarity'].mean()
+    mean_subjectivity = year_data['Subjectivity'].mean()
+    positive_tweets = (year_data['vader'] == 'pos').sum()
+    neutral_tweets = (year_data['vader'] == 'neu').sum()
+    negative_tweets = (year_data['vader'] == 'neg').sum()
+
+    results[year] = pd.DataFrame({
+        'Mean_VADER_Score': [mean_vader_score],
+        'Mean_Sentiment_Score': [mean_sentiment_score],
+        'Mean_Polarity': [mean_polarity],
+        'Mean_Subjectivity': [mean_subjectivity],
+        'Positive_Tweets': [positive_tweets],
+        'Neutral_Tweets': [neutral_tweets],
+        'Negative_Tweets': [negative_tweets],
+    })
+
+
+    pd.set_option('display.max_columns', None)
+
+
+for year, result_df in results.items():
+    print(f"Year: {year}")
+    print(result_df)
+import pandas as pd
+from nltk.sentiment.vader import SentimentIntensityAnalyzer
+from textblob import TextBlob
+import re
+import string
+from nltk.corpus import stopwords
+from nltk.tokenize import word_tokenize
+from nltk.stem import WordNetLemmatizer
+
+sid = SentimentIntensityAnalyzer()
+
+df = pd.read_csv(r'C:\Users\PC\Desktop\disertatie\disertatie.csv', encoding='latin-1')  # Replace with your file path
+df['Date'] = pd.to_datetime(df['Date'])
+df['Year'] = df['Date'].dt.year
+
+
+
+def remove_emojis(text):
+    emoji_pattern = re.compile("["
+                               u"\U0001F600-\U0001F64F"  # emoticons
+                               u"\U0001F300-\U0001F5FF"  # symbols & pictographs
+                               u"\U0001F680-\U0001F6FF"  # transport & map symbols
+                               u"\U0001F1E0-\U0001F1FF"  # flags (iOS)
+                               "]+", flags=re.UNICODE)
+    return emoji_pattern.sub(r'', text)
+
+
+def preprocess_text(text):
+
+    text = re.sub(r'http\S+', '', text)
+    text = re.sub(r'www\S+', '', text)
+
+
+    text = remove_emojis(text)
+    text = re.sub(r'[^a-zA-Z\s]', '', text)
+
+
+    tokens = word_tokenize(text)
+
+
+    stop_words = set(stopwords.words('english'))
+    tokens = [t for t in tokens if t.lower() not in stop_words]
+
+    tokens = [t for t in tokens if t not in string.punctuation]
+
+
+    lemmatizer = WordNetLemmatizer()
+    tokens = [lemmatizer.lemmatize(t) for t in tokens]
+
+
+    tokens = [t.lower() for t in tokens]
+
+    return ' '.join(tokens)
+
+
+
+def compute_scores(df):
+    
+    df['Processed_Tweet'] = df['Tweet'].apply(preprocess_text)
+
+    df['Sentiment_Score'] = df['Processed_Tweet'].apply(lambda tweet: sid.polarity_scores(tweet))
+    df['compound'] = df['Sentiment_Score'].apply(lambda score_dict: score_dict['compound'])
+    df['vader'] = df['compound'].apply(lambda c: 'pos' if c >= 0.05 else ('neg' if c <= -0.05 else 'neu'))
+
+    df['Polarity'] = df['Processed_Tweet'].apply(lambda tweet: TextBlob(tweet).sentiment.polarity)
+    df['Subjectivity'] = df['Processed_Tweet'].apply(lambda tweet: TextBlob(tweet).sentiment.subjectivity)
+
+    return df
+
+
+df = compute_scores(df)
+
+
+results = {}
+
+
+for year in df['Year'].unique():
+    year_data = df[df['Year'] == year]
+    mean_vader_score = year_data['compound'].mean()
+    mean_sentiment_score = year_data['Sentiment_Score'].apply(lambda d: d['compound']).mean()
+    mean_polarity = year_data['Polarity'].mean()
+    mean_subjectivity = year_data['Subjectivity'].mean()
+    positive_tweets = (year_data['vader'] == 'pos').sum()
+    neutral_tweets = (year_data['vader'] == 'neu').sum()
+    negative_tweets = (year_data['vader'] == 'neg').sum()
+    total_tweets = len(year_data)
+
+    results[year] = pd.DataFrame({
+        'Mean_VADER_Score': [mean_vader_score],
+        'Mean_Sentiment_Score': [mean_sentiment_score],
+        'Mean_Polarity': [mean_polarity],
+        'Mean_Subjectivity': [mean_subjectivity],
+        'Positive_Tweets': [positive_tweets],
+        'Neutral_Tweets': [neutral_tweets],
+        'Negative_Tweets': [negative_tweets],
+        'Total_Tweets': [total_tweets]
+    })
+
+    pd.set_option('display.max_columns', None)
+
+for year, result_df in results.items():
+    print(f"Year: {year}")
+    print(result_df)
+import pandas as pd
+from nltk.sentiment.vader import SentimentIntensityAnalyzer
+import yfinance as yf
+
+
+sid = SentimentIntensityAnalyzer()
+
+
+df = pd.read_csv(r'C:\Users\PC\Desktop\disertatie\disertatie.csv', encoding='latin-1')  # Replace with your file path
+df['Date'] = pd.to_datetime(df['Date'])
+
+df['Sentiment_Score'] = df['Tweet'].apply(lambda tweet: sid.polarity_scores(tweet))
+df['compound'] = df['Sentiment_Score'].apply(lambda score_dict: score_dict['compound'])
+
+df.set_index('Date', inplace=True)
+
+df = df[['compound']]
+
+df_daily = df.groupby(df.index).mean()
+
+btc = yf.download('BTC-USD', start='2019-01-01', end='2022-12-31')
+btc = btc.resample('D').mean()
+btc['Return'] = btc['Close'].pct_change()
+
+merged = pd.merge(btc, df_daily, left_index=True, right_index=True, how='inner')
+
+for year in range(2019, 2023):
+    merged_year = merged[merged.index.year == year]
+    correlation = merged_year['Return'].corr(merged_year['compound'])
+    print(f"Correlation for year {year}: {correlation}")
+import pandas as pd
+import numpy as np
+from nltk.sentiment.vader import SentimentIntensityAnalyzer
+import yfinance as yf
+import re
+import nltk
+from nltk.corpus import stopwords
+from nltk.tokenize import word_tokenize
+import matplotlib.pyplot as plt
+
+nltk.download('punkt')
+nltk.download('stopwords')
+
+stop_words = set(stopwords.words('english'))
+
+
+sid = SentimentIntensityAnalyzer()
+
+
+def preprocess_tweet(tweet):
+
+    tweet = re.sub(r"http\S+|www\S+|https\S+", '', tweet, flags=re.MULTILINE)
+    
+    tweet = tweet.encode('ascii', 'ignore').decode('ascii')
+    tweet = re.sub(r'\W', ' ', tweet)
+    tweet = re.sub(r'\d', ' ', tweet)
+    
+    tweet = ' '.join(tweet.split())
+
+    tweet = tweet.lower()
+
+    tokens = word_tokenize(tweet)
+
+    tokens = [token for token in tokens if token not in stop_words]
+    tweet = ' '.join(tokens)
+    return tweet
+
+
+df = pd.read_csv(r'C:\Users\PC\Desktop\disertatie\disertatie.csv', encoding='latin-1')  # Replace with your file path
+df['Date'] = pd.to_datetime(df['Date'])
+
+df['Tweet'] = df['Tweet'].apply(preprocess_tweet)
+
+
+df['Sentiment_Score'] = df['Tweet'].apply(lambda tweet: sid.polarity_scores(tweet))
+df['compound'] = df['Sentiment_Score'].apply(lambda score_dict: score_dict['compound'])
+
+df.set_index('Date', inplace=True)
+
+df = df[['compound']]
+
+
+df_daily = df.groupby(df.index).mean()
+
+
+btc = yf.download('BTC-USD', start='2019-01-01', end='2022-12-31')
+btc = btc.resample('D').mean()
+btc['Return'] = btc['Close'].pct_change()
+
+merged = pd.merge(btc, df_daily, left_index=True, right_index=True, how='inner')
+
+
+for year in range(2019, 2023):
+    merged_year = merged[merged.index.year == year]
+    correlation = merged_year['Return'].corr(merged_year['compound'])
+    print(f"Correlation for year {year}: {correlation}")
+
+plt.figure(figsize=(14,7))
+plt.plot(merged['compound'], label='Sentiment Score')
+plt.plot(merged['Return'], label='Bitcoin Returns')
+plt.legend(loc='best')
+plt.title('Sentiment Score and Bitcoin Returns')
+plt.show()
+import pandas as pd
+import nltk
+import numpy as np
+import re
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.metrics import mean_squared_error
+import matplotlib.pyplot as plt
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import LSTM, Dense, Dropout
+from nltk.corpus import stopwords
+from nltk.sentiment.vader import SentimentIntensityAnalyzer
+from nltk.tokenize import word_tokenize
+import yfinance as yf
+import math
+
+
+nltk.download('punkt')
+nltk.download('stopwords')
+nltk.download('vader_lexicon')
+
+stop_words = set(stopwords.words('english'))
+
+
+def preprocess_tweet(tweet):
+    tweet = re.sub(r"http\S+|www\S+|https\S+", '', tweet, flags=re.MULTILINE)
+    tweet = tweet.encode('ascii', 'ignore').decode('ascii')
+    tweet = re.sub(r'\W', ' ', tweet)
+    tweet = re.sub(r'\d', ' ', tweet)
+    tweet = ' '.join(tweet.split())
+    tweet = tweet.lower()
+    tokens = word_tokenize(tweet)
+    tokens = [token for token in tokens if token not in stop_words]
+    tweet = ' '.join(tokens)
+    return tweet
+
+
+df = pd.read_csv(r'C:\Users\PC\Desktop\disertatie\disertatie.csv', encoding='latin-1')
+df['Date'] = pd.to_datetime(df['Date'])
+
+sid = SentimentIntensityAnalyzer()
+
+
+df['Tweet'] = df['Tweet'].apply(preprocess_tweet)
+df['Date'] = pd.to_datetime(df['Date'])
+
+
+df['Sentiment'] = df['Tweet'].apply(lambda tweet: sid.polarity_scores(tweet)['compound'])
+
+
+mean_scores = df.groupby('Date')['Sentiment'].mean().reset_index()
+
+
+btc = yf.download('BTC-USD', start='2019-01-01', end='2022-12-31')
+btc.reset_index(inplace=True)
+btc['Date'] = pd.to_datetime(btc['Date'])
+
+
+final_df = pd.merge(btc, mean_scores, on='Date', how='inner')
+
+
+def create_dataset(dataset, look_back=14):
+    dataX, dataY = [], []
+    for i in range(len(dataset)-look_back-1):
+        a = dataset[i:(i+look_back), :]
+        dataX.append(a)
+        dataY.append(dataset[i + look_back, 0])
+    return np.array(dataX), np.array(dataY)
+
+
+scaler_close = MinMaxScaler(feature_range=(0, 1))
+dataset_close = scaler_close.fit_transform(final_df[['Close']])
+
+scaler_sentiment = MinMaxScaler(feature_range=(0, 1))
+dataset_sentiment = scaler_sentiment.fit_transform(final_df[['Sentiment']])
+
+
+dataset = np.concatenate([dataset_close, dataset_sentiment], axis=1)
+
+
+train_size = int(len(dataset) * 0.7)
+test_size = len(dataset) - train_size
+train, test = dataset[0:train_size, :], dataset[train_size:len(dataset), :]
+
+
+look_back = 14
+trainX, trainY = create_dataset(train, look_back)
+testX, testY = create_dataset(test, look_back)
+
+trainX = np.reshape(trainX, (trainX.shape[0], trainX.shape[1], 2))  # Modified the shape to include both features
+testX = np.reshape(testX, (testX.shape[0], testX.shape[1], 2))  # Modified the shape to include both features
+
+
+model = Sequential()
+model.add(LSTM(4, input_shape=(look_back, 2)))  # Modified the input shape
+model.add(Dropout(0.2))
+model.add(Dense(1))
+model.compile(loss='mean_squared_error', optimizer='adam')
+
+
+model.fit(trainX, trainY, epochs=100, batch_size=1, verbose=2)
+
+
+trainPredict = model.predict(trainX)
+testPredict = model.predict(testX)
+
+trainPredict_close = trainPredict[:, 0]
+testPredict_close = testPredict[:, 0]
+
+trainPredict_close = scaler_close.inverse_transform(trainPredict_close.reshape(-1, 1)).flatten()
+trainY_close = scaler_close.inverse_transform(trainY.reshape(-1, 1)).flatten()
+testPredict_close = scaler_close.inverse_transform(testPredict_close.reshape(-1, 1)).flatten()
+testY_close = scaler_close.inverse_transform(testY.reshape(-1, 1)).flatten()
+
+
+trainScore_close = math.sqrt(mean_squared_error(trainY_close, trainPredict_close))
+print('Train Score (Close): %.2f RMSE' % trainScore_close)
+testScore_close = math.sqrt(mean_squared_error(testY_close, testPredict_close))
+print('Test Score (Close): %.2f RMSE' % testScore_close)
+
+
+trainPredictPlot_close = np.empty_like(dataset[:, 0])
+trainPredictPlot_close[:] = np.nan
+trainPredictPlot_close[look_back:len(trainPredict_close)+look_back] = trainPredict_close
+
+
+testPredictPlot_close = np.empty_like(dataset[:, 0])
+testPredictPlot_close[:] = np.nan
+testPredictPlot_close[len(trainPredict_close)+(look_back*2)+1:len(dataset)-1] = testPredict_close
+
+plt.figure(figsize=(12, 8))  # You can adjust this to change the size of your plot
+plt.plot(scaler_close.inverse_transform(dataset_close), color='blue', label='Actual')
+plt.plot(trainPredictPlot_close, color='red', label='Train Predicted')
+plt.plot(testPredictPlot_close, color='green', label='Test Predicted')
+plt.title('Bitcoin Price (Close) - Actual vs Predicted with RMSE Train %.2f, Test %.2f' % (trainScore_close, testScore_close))
+plt.ylabel('Price (USD)')
+plt.xlabel('Days')
+plt.legend()  
+
+plt.show()
